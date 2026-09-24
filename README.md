@@ -57,20 +57,12 @@ python3 -m venv .venv
 ./run.sh
 ```
 
-### Windows — Git Bash
-
-```bash
-py -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.txt
-./run.bash
-```
-
 ### Windows — PowerShell / Command Prompt
 
 ```powershell
 py -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe gallery_dl_gui.py
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe gallery_dl_gui.py
 ```
 
 ---
