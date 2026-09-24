@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iva-dwler"
+version = "1.0"
+description = "A modern cross-platform desktop interface for gallery-dl"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gallery-dl>=1.32.0",
+    "PySide6>=6.11,<6.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9",
+    "pytest-qt>=4.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
+
+[tool.setuptools.packages.find]
+include = ["iva_downloader*"]
+
+[tool.setuptools.package-data]
+iva_downloader = ["assets/**/*"]

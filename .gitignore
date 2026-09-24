@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.txt.bak
+*.sqlite3
+
+# Input/Output folders — ignore content, keep folder structure
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+
+*.egg-info/
+.worktrees/
