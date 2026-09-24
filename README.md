@@ -9,7 +9,7 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 [![PySide6](https://img.shields.io/badge/UI-PySide6%206.11-41CD52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython/)
 [![gallery-dl](https://img.shields.io/badge/gallery--dl-≥%201.32-FF6B6B?style=flat-square)](https://github.com/mikf/gallery-dl)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-5865F2?style=flat-square)](.)
-[![Version](https://img.shields.io/badge/version-1.0-0ea5e9?style=flat-square)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-1.0.0-0ea5e9?style=flat-square)](pyproject.toml)
 
 <br/>
 
