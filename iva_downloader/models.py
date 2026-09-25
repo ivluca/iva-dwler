@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections import Counter
 import re
 
 
@@ -29,3 +30,11 @@ def validate_settings(settings: DownloadSettings, urls: list[str]) -> dict[str, 
             errors["jobs"] = "Enter a whole number ≥ 1."
 
     return errors
+
+
+def find_duplicate_urls(urls: list[str]) -> tuple[list[str], list[tuple[str, int]]]:
+    """Keep each URL's first occurrence and list repeated URLs in input order."""
+    counts = Counter(urls)
+    unique = list(dict.fromkeys(urls))
+    duplicates = [(url, counts[url]) for url in unique if counts[url] > 1]
+    return unique, duplicates

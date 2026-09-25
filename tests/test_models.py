@@ -1,4 +1,4 @@
-from iva_downloader.models import DownloadSettings, validate_settings
+from iva_downloader.models import DownloadSettings, find_duplicate_urls, validate_settings
 
 
 def test_validate_settings_rejects_missing_urls_and_destination():
@@ -40,3 +40,10 @@ def test_validate_settings_accepts_blank_jobs():
     errors = validate_settings(settings, ["https://example.com/gallery"])
 
     assert "jobs" not in errors
+
+
+def test_find_duplicate_urls_keeps_first_occurrences_and_reports_counts():
+    unique, duplicates = find_duplicate_urls(["a", "b", "a", "c", "b", "a"])
+
+    assert unique == ["a", "b", "c"]
+    assert duplicates == [("a", 3), ("b", 2)]

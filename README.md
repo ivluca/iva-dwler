@@ -9,7 +9,7 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 [![PySide6](https://img.shields.io/badge/UI-PySide6%206.11-41CD52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython/)
 [![gallery-dl](https://img.shields.io/badge/gallery--dl-≥%201.32-FF6B6B?style=flat-square)](https://github.com/mikf/gallery-dl)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-5865F2?style=flat-square)](.)
-[![Version](https://img.shields.io/badge/version-1.0.0-0ea5e9?style=flat-square)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-1.1.0-0ea5e9?style=flat-square)](pyproject.toml)
 
 <br/>
 
@@ -25,6 +25,7 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 - **Paste or type** URLs directly — one per line
 - **Import from file** — load a `.txt` list of URLs in one click
 - **Comment support** — lines starting with `#` are silently skipped
+- **Duplicate warning** — remove repeated URL lines and download each link once, or confirm every occurrence
 - **Cookie file** — point to a Netscape-format `cookies.txt` for sites requiring login
 
 **Controls**
@@ -34,14 +35,15 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 
 **Activity panel**
 - **Live log** — colour-coded output streams in real time (info, success, warning, error)
-- **Progress bar** — animated while a job is running
-- **Batch counter** — tracks URLs queued and files downloaded
+- **Task progress** — highlights the active URL, completed URLs, failures, and remaining count
+- **Batch counter** — tracks URLs submitted and files downloaded
 - **Stop anytime** — graceful terminate with a 3-second kill fallback
+- **Transfer stats** — track downloaded files, total size, and average transfer speed
 
 **UX**
 - **Persistent settings** — last-used paths and options are remembered between sessions
 - **Polished light theme** — Qt Fusion palette with custom stylesheet, SVG icons, and a brand font
-- **Resizable two-panel layout** — setup on the left, activity on the right
+- **Fixed two-panel layout** — setup on the left, activity on the right
 
 ---
 
@@ -111,8 +113,8 @@ gallery-dl-gui/
 │        Setup panel          │     │        Activity panel          │
 │                             │     │                                │
 │  URLs (one per line)        │     │  Live coloured log output      │
-│  Destination folder         │──►  │  Progress bar (animated)       │
-│  Cookie file (optional)     │     │  Downloaded / skipped counts   │
+│  Destination folder         │──►  │  Per-URL status and progress   │
+│  Cookie file (optional)     │     │  Downloaded / remaining counts │
 │  Advanced: config, flags,   │     │  Start / Stop buttons          │
 │  simulate, verbose          │     │                                │
 └─────────────────────────────┘     └────────────────────────────────┘
