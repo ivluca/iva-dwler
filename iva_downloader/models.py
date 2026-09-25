@@ -12,6 +12,7 @@ class DownloadSettings:
     simulate: bool = False
     verbose: bool = False
     extra_arguments: str = ""
+    language: str = "en"
 
 
 def validate_settings(settings: DownloadSettings, urls: list[str]) -> dict[str, str]:

@@ -35,6 +35,8 @@ class SettingsStore:
             for key, value in normalized.items()
             if key in known and type(value) is type(getattr(defaults, key))
         }
+        if values.get("language") not in {"en", "vi", "ja", "zh"}:
+            values["language"] = "en"
         return DownloadSettings(**values)
 
     def save(self, settings: DownloadSettings) -> None:

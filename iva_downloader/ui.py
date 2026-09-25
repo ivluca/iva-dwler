@@ -34,12 +34,43 @@ from PySide6.QtWidgets import (
 
 from .command import build_command, gallery_dl_base_command
 from .models import DownloadSettings, find_duplicate_urls, validate_settings
-from .resources import icon, load_brand_font
+from .resources import icon, load_app_font
 from .runner import DownloadRunner
 from .settings import SettingsStore
 
 
 APP_NAME = "IVA Downloader"
+
+TRANSLATIONS = {
+    "vi": {
+        "Settings": "Cài đặt", "Check for updates": "Kiểm tra cập nhật", "Language": "Ngôn ngữ", "Advanced": "Nâng cao", "Updates": "Cập nhật", "Apply": "Áp dụng", "Cancel": "Hủy",
+        "Hide advanced": "Ẩn nâng cao", "URLs": "Đường dẫn URL", "Add one URL per line. Lines beginning with # are ignored.": "Nhập mỗi URL trên một dòng. Dòng bắt đầu bằng # sẽ được bỏ qua.",
+        "Paste": "Dán", "Import file": "Nhập tệp", "Clear": "Xóa", "Destination": "Thư mục lưu", "Choose where downloaded files are saved.": "Chọn nơi lưu tệp đã tải.",
+        "Cookie source": "Nguồn cookie", "Choose a cookies.txt file only when a site requires authentication.": "Chỉ chọn tệp cookies.txt khi trang web yêu cầu xác thực.",
+        "Choose an output folder": "Chọn thư mục lưu", "Choose a Netscape-format cookies.txt file": "Chọn tệp cookies.txt định dạng Netscape", "Browse": "Duyệt",
+        "Diagnostics": "Chẩn đoán", "Optional gallery-dl config and extra flags.": "Tệp cấu hình gallery-dl và tùy chọn bổ sung.", "Optional gallery-dl config file": "Tệp cấu hình gallery-dl (tùy chọn)",
+        "Example: --no-mtime": "Ví dụ: --no-mtime", "Pass additional gallery-dl command-line arguments.": "Thêm tham số dòng lệnh cho gallery-dl.",
+        "Simulate only — preview files without downloading": "Chạy thử — xem trước mà không tải tệp", "Verbose logging — show detailed HTTP activity": "Nhật ký chi tiết — hiển thị hoạt động HTTP",
+        "Activity": "Hoạt động", "Ready": "Sẵn sàng", "Tasks": "Tác vụ", "Start download": "Bắt đầu tải", "Stop": "Dừng", "Clear log": "Xóa nhật ký",
+        "Download activity will appear here.": "Hoạt động tải xuống sẽ hiển thị tại đây.", "Check for updates": "Kiểm tra cập nhật",
+    },
+    "ja": {
+        "Settings": "設定", "Check for updates": "更新を確認", "Language": "言語", "Advanced": "詳細設定", "Updates": "更新", "Apply": "適用", "Cancel": "キャンセル",
+        "URLs": "URL", "Add one URL per line. Lines beginning with # are ignored.": "URLを1行に1つ入力してください。#で始まる行は無視されます。", "Paste": "貼り付け", "Import file": "ファイルを読み込む", "Clear": "クリア",
+        "Destination": "保存先", "Choose where downloaded files are saved.": "ダウンロードしたファイルの保存先を選択します。", "Cookie source": "Cookie", "Choose a cookies.txt file only when a site requires authentication.": "認証が必要な場合のみcookies.txtを選択してください。",
+        "Choose an output folder": "保存先フォルダーを選択", "Choose a Netscape-format cookies.txt file": "Netscape形式のcookies.txtを選択", "Browse": "参照", "Diagnostics": "詳細オプション", "Optional gallery-dl config and extra flags.": "gallery-dl設定ファイルと追加オプション（任意）。",
+        "Optional gallery-dl config file": "gallery-dl設定ファイル（任意）", "Example: --no-mtime": "例: --no-mtime", "Simulate only — preview files without downloading": "シミュレーション — ダウンロードせずに確認", "Verbose logging — show detailed HTTP activity": "詳細ログ — HTTP通信を表示",
+        "Activity": "アクティビティ", "Ready": "準備完了", "Tasks": "タスク", "Start download": "ダウンロード開始", "Stop": "停止", "Clear log": "ログを消去", "Download activity will appear here.": "ダウンロード状況がここに表示されます。",
+    },
+    "zh": {
+        "Settings": "设置", "Check for updates": "检查更新", "Language": "语言", "Advanced": "高级", "Updates": "更新", "Apply": "应用", "Cancel": "取消",
+        "URLs": "链接", "Add one URL per line. Lines beginning with # are ignored.": "每行输入一个 URL。以 # 开头的行将被忽略。", "Paste": "粘贴", "Import file": "导入文件", "Clear": "清除",
+        "Destination": "保存位置", "Choose where downloaded files are saved.": "选择下载文件的保存位置。", "Cookie source": "Cookie 来源", "Choose a cookies.txt file only when a site requires authentication.": "仅在网站需要身份验证时选择 cookies.txt 文件。",
+        "Choose an output folder": "选择输出文件夹", "Choose a Netscape-format cookies.txt file": "选择 Netscape 格式的 cookies.txt 文件", "Browse": "浏览", "Diagnostics": "诊断", "Optional gallery-dl config and extra flags.": "可选的 gallery-dl 配置和额外参数。",
+        "Optional gallery-dl config file": "可选的 gallery-dl 配置文件", "Example: --no-mtime": "例如：--no-mtime", "Simulate only — preview files without downloading": "仅模拟 — 预览文件，不进行下载", "Verbose logging — show detailed HTTP activity": "详细日志 — 显示 HTTP 活动",
+        "Activity": "活动", "Ready": "就绪", "Tasks": "任务", "Start download": "开始下载", "Stop": "停止", "Clear log": "清除日志", "Download activity will appear here.": "下载活动将显示在这里。",
+    },
+}
 
 
 def default_output_directory(home: Path | None = None) -> Path:
@@ -132,6 +163,54 @@ class DuplicateUrlsDialog(QDialog):
         return super().eventFilter(watched, event)
 
 
+class SettingsDialog(QDialog):
+    LANGUAGES = [("English", "en"), ("Tiếng Việt", "vi"), ("日本語", "ja"), ("中文", "zh")]
+
+    def __init__(self, advanced_card: QWidget, version_label: QLabel, update_button: QPushButton, language: str, parent: QWidget):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setObjectName("SettingsDialog")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setSpacing(14)
+        title = QLabel("Settings")
+        title.setObjectName("SectionTitle")
+        layout.addWidget(title)
+        language_group = QGroupBox("Language")
+        language_layout = QVBoxLayout(language_group)
+        self.language_combo = QComboBox()
+        for label, code in self.LANGUAGES:
+            self.language_combo.addItem(label, code)
+        index = self.language_combo.findData(language)
+        self.language_combo.setCurrentIndex(max(index, 0))
+        language_layout.addWidget(self.language_combo)
+        layout.addWidget(language_group)
+        advanced_group = QGroupBox("Advanced")
+        advanced_layout = QVBoxLayout(advanced_group)
+        advanced_card.setVisible(True)
+        advanced_layout.addWidget(advanced_card)
+        layout.addWidget(advanced_group)
+        update_group = QGroupBox("Updates")
+        update_layout = QVBoxLayout(update_group)
+        update_row = QHBoxLayout()
+        update_row.addWidget(version_label)
+        update_row.addStretch()
+        update_row.addWidget(update_button)
+        update_layout.addLayout(update_row)
+        layout.addWidget(update_group)
+        layout.addStretch()
+        actions = QHBoxLayout()
+        actions.addStretch()
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+        actions.addWidget(self.cancel_button)
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.setDefault(True)
+        actions.addWidget(self.apply_button)
+        layout.addLayout(actions)
+        self.setMinimumWidth(440)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, settings_store: SettingsStore | None = None, check_gallery_dl: bool = True):
         super().__init__()
@@ -155,8 +234,10 @@ class MainWindow(QMainWindow):
         self._update_mode = False
         self._close_after_stop = False
         self._version_process: QProcess | None = None
-        self._brand_family = load_brand_font()
+        self._brand_family = load_app_font()
         base_font = QFont(self.font())
+        if self._brand_family:
+            base_font.setFamily(self._brand_family)
         base_font.setWeight(QFont.Weight.Medium)
         self.setFont(base_font)
 
@@ -165,7 +246,10 @@ class MainWindow(QMainWindow):
         self.resize(1180, 760)
         self.setMinimumSize(980, 640)
         self._build_ui()
-        self._apply_settings(self.settings_store.load())
+        self._capture_ui_text()
+        self._applied_settings = self.settings_store.load()
+        self._apply_settings(self._applied_settings)
+        self._translate_interface()
         self._apply_style()
         if check_gallery_dl:
             QTimer.singleShot(250, self._check_gallery_dl)
@@ -186,10 +270,9 @@ class MainWindow(QMainWindow):
         header.addStretch()
         self.version_label = QLabel("Checking gallery-dl…")
         self.version_label.setObjectName("Muted")
-        header.addWidget(self.version_label)
-        self.update_button = self._button("Check for updates", "system_update_alt", self._update_gallery_dl)
-        self.update_button.setProperty("secondary", True)
-        header.addWidget(self.update_button)
+        self.settings_button = self._button("Settings", "tune", self._open_settings)
+        self.settings_button.setProperty("secondary", True)
+        header.addWidget(self.settings_button)
         root.addLayout(header)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -203,6 +286,10 @@ class MainWindow(QMainWindow):
         splitter.handle(1).setEnabled(False)
         root.addWidget(splitter, 1)
         self.setCentralWidget(central)
+        self.update_button = self._button("Check for updates", "system_update_alt", self._update_gallery_dl)
+        self.update_button.setProperty("secondary", True)
+        self.settings_dialog = SettingsDialog(self.diag_card, self.version_label, self.update_button, "en", self)
+        self.settings_dialog.apply_button.clicked.connect(self._apply_settings_changes)
 
     def _build_setup_panel(self) -> QWidget:
         scroll = QScrollArea()
@@ -254,15 +341,6 @@ class MainWindow(QMainWindow):
         auth_layout.addLayout(file_row)
         layout.addWidget(auth_card)
 
-        self.adv_toggle = QPushButton("Advanced")
-        self.adv_toggle.setCheckable(True)
-        self.adv_toggle.setProperty("adv_link", True)
-        self.adv_toggle.toggled.connect(self._toggle_diag_advanced)
-        advanced_row = QHBoxLayout()
-        advanced_row.addWidget(self.adv_toggle)
-        advanced_row.addStretch()
-        layout.addLayout(advanced_row)
-
         self.diag_card, diag_layout = self._card("Diagnostics", "Optional gallery-dl config and extra flags.")
         config_row = QHBoxLayout()
         self.config_file_input = QLineEdit()
@@ -283,7 +361,7 @@ class MainWindow(QMainWindow):
         diag_layout.addWidget(self.simulate_checkbox)
         diag_layout.addWidget(self.verbose_checkbox)
 
-        self.diag_card.setVisible(False)
+        self.diag_card.setVisible(True)
         layout.addWidget(self.diag_card)
 
         layout.addStretch()
@@ -342,7 +420,7 @@ class MainWindow(QMainWindow):
         self.log.setObjectName("Log")
         self.log.setReadOnly(True)
         self.log.setPlaceholderText("Download activity will appear here.")
-        self.log.setFont(QFont("monospace", 10))
+        self.log.setFont(QFont(self._brand_family, 10))
         layout.addWidget(self.log, 1)
         actions = QHBoxLayout()
         self.start_button = self._button("Start download", "download", self._start_download)
@@ -416,9 +494,46 @@ class MainWindow(QMainWindow):
         label.setWordWrap(True)
         return label
 
-    def _toggle_diag_advanced(self, expanded: bool) -> None:
-        self.diag_card.setVisible(expanded)
-        self.adv_toggle.setText("Hide advanced" if expanded else "Advanced")
+    def _open_settings(self) -> None:
+        self.settings_dialog.exec()
+        if self.settings_dialog.result() != QDialog.DialogCode.Accepted:
+            self._apply_settings(self._applied_settings)
+
+    def _apply_settings_changes(self) -> None:
+        settings = self._collect_settings()
+        try:
+            self.settings_store.save(settings)
+        except OSError as error:
+            QMessageBox.warning(self, APP_NAME, f"Could not apply settings: {error}")
+            return
+        self._applied_settings = settings
+        self._translate_interface()
+        self.settings_dialog.accept()
+
+    def _capture_ui_text(self) -> None:
+        for widget in self.findChildren(QWidget):
+            if isinstance(widget, (QLabel, QPushButton, QCheckBox, QGroupBox)):
+                widget.setProperty("englishText", widget.text() if hasattr(widget, "text") else widget.title())
+            if isinstance(widget, (QLineEdit, QPlainTextEdit, QTextEdit)):
+                widget.setProperty("englishPlaceholder", widget.placeholderText())
+
+    def _translate_interface(self) -> None:
+        language = self.settings_dialog.language_combo.currentData()
+        translations = TRANSLATIONS.get(language, {})
+        for widget in self.findChildren(QWidget):
+            original = widget.property("englishText")
+            if original is not None:
+                translated = translations.get(original, original)
+                if isinstance(widget, QGroupBox):
+                    widget.setTitle(translated)
+                elif hasattr(widget, "setText"):
+                    widget.setText(translated)
+            placeholder = widget.property("englishPlaceholder")
+            if placeholder:
+                placeholder_map = translations.get(placeholder, placeholder)
+                widget.setPlaceholderText(placeholder_map)
+        self.settings_dialog.setWindowTitle(translations.get("Settings", "Settings"))
+        self.setWindowTitle(APP_NAME)
 
     def _collect_urls(self) -> list[str]:
         return [line.strip() for line in self.urls_input.toPlainText().splitlines() if line.strip() and not line.lstrip().startswith("#")]
@@ -444,6 +559,7 @@ class MainWindow(QMainWindow):
             simulate=self.simulate_checkbox.isChecked(),
             verbose=self.verbose_checkbox.isChecked(),
             extra_arguments=self.extra_arguments_input.text().strip(),
+            language=self.settings_dialog.language_combo.currentData() if hasattr(self, "settings_dialog") else "en",
         )
 
     def _apply_settings(self, settings: DownloadSettings) -> None:
@@ -453,6 +569,9 @@ class MainWindow(QMainWindow):
         self.simulate_checkbox.setChecked(settings.simulate)
         self.verbose_checkbox.setChecked(settings.verbose)
         self.extra_arguments_input.setText(settings.extra_arguments)
+        index = self.settings_dialog.language_combo.findData(settings.language) if hasattr(self, "settings_dialog") else -1
+        if index >= 0:
+            self.settings_dialog.language_combo.setCurrentIndex(index)
 
     def _clear_errors(self) -> None:
         for label in (
@@ -776,6 +895,7 @@ class MainWindow(QMainWindow):
     def _apply_style(self) -> None:
         from .resources import resource_path
         check_icon = str(resource_path("icons", "check.svg")).replace("\\", "/")
+        dropdown_icon = str(resource_path("icons", "arrow_drop_down.svg")).replace("\\", "/")
         self.setStyleSheet("""
             QWidget#AppRoot { background: #f4f6f8; color: #1f2937; }
             QWidget { font-size: 13px; }
@@ -819,11 +939,8 @@ class MainWindow(QMainWindow):
             }
             QComboBox::drop-down:hover { background: #dde7ee; }
             QComboBox::down-arrow {
-                image: none;
-                width: 0; height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #527b98;
+                image: url(""" + dropdown_icon + """);
+                width: 14px; height: 14px; border: none;
             }
             QComboBox QAbstractItemView {
                 background: #ffffff;
@@ -862,6 +979,7 @@ class MainWindow(QMainWindow):
             QPushButton#PrimaryButton { background: #315b7c; color: #ffffff; border-color: #315b7c; font-weight: 500; }
             QPushButton#PrimaryButton:hover { background: #274b67; }
             QPushButton#DialogCloseButton { background: transparent; color: #64748b; border: none; padding: 0; font-size: 20px; }
+            QDialog#SettingsDialog { background: #f4f6f8; }
             QPushButton#DialogCloseButton:hover { background: #edf2f7; color: #183b56; }
             QPushButton[advanced="true"] { text-align: left; background: #ffffff; padding: 10px 12px; }
             QProgressBar { border: none; background: #dfe7ed; border-radius: 3px; min-height: 6px; max-height: 6px; }

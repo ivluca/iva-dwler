@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QDialog, QMessageBox, QPushButton, QScrollArea, QSplitter
 
@@ -49,16 +49,58 @@ def test_panels_stay_fixed_without_horizontal_scroll_or_progress_text_overlap(qt
     assert window.progress.isTextVisible() is False
 
 
-def test_advanced_toggle_reveals_entire_diagnostics_card(qtbot, tmp_path):
+def test_advanced_settings_are_always_visible_without_hide_toggle(qtbot, tmp_path):
     window = make_window(qtbot, tmp_path)
-
-    qtbot.mouseClick(window.adv_toggle, Qt.MouseButton.LeftButton)
+    window.settings_dialog.show()
 
     assert window.diag_card.isVisible() is True
     assert window.config_file_input.isVisible() is True
     assert window.extra_arguments_input.isVisible() is True
     assert window.simulate_checkbox.isVisible() is True
     assert window.verbose_checkbox.isVisible() is True
+    assert not hasattr(window, "adv_toggle")
+
+
+def test_settings_contains_updates_advanced_and_language_choices(qtbot, tmp_path):
+    window = make_window(qtbot, tmp_path)
+    dialog = window.settings_dialog
+
+    assert dialog.language_combo.count() == 4
+    assert [dialog.language_combo.itemData(i) for i in range(4)] == ["en", "vi", "ja", "zh"]
+    assert window.update_button.parent() is not None
+    assert window.update_button.parent().parent() is dialog
+    assert window.version_label.parent() is window.update_button.parent()
+    assert window.diag_card.parent() is not None
+    assert dialog.apply_button.text() == "Apply"
+    assert dialog.cancel_button.text() == "Cancel"
+
+
+def test_language_selection_translates_interface_and_persists(qtbot, tmp_path):
+    window = make_window(qtbot, tmp_path)
+
+    window.settings_dialog.language_combo.setCurrentIndex(1)
+
+    assert window.settings_button.text() == "Settings"
+    assert SettingsStore(tmp_path / "settings.json").load().language == "en"
+
+    window.settings_dialog.apply_button.click()
+
+    assert window.settings_button.text() == "Cài đặt"
+    assert window.start_button.text() == "Bắt đầu tải"
+    assert SettingsStore(tmp_path / "settings.json").load().language == "vi"
+
+
+def test_cancel_settings_discards_unapplied_changes(qtbot, tmp_path):
+    window = make_window(qtbot, tmp_path)
+    window.settings_dialog.language_combo.setCurrentIndex(1)
+    window.simulate_checkbox.setChecked(True)
+    QTimer.singleShot(0, window.settings_dialog.reject)
+
+    window._open_settings()
+
+    assert window.settings_button.text() == "Settings"
+    assert window.settings_dialog.language_combo.currentData() == "en"
+    assert window.simulate_checkbox.isChecked() is False
 
 
 def test_start_validation_is_inline_and_does_not_start_runner(qtbot, tmp_path):

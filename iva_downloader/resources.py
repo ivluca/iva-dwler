@@ -22,8 +22,8 @@ def resource_path(*parts: str) -> Path:
     return Path(__file__).resolve().parent / "assets" / Path(*parts)
 
 
-def load_brand_font() -> str:
-    font_id = QFontDatabase.addApplicationFont(str(resource_path("fonts", "Amarante-Regular.ttf")))
+def load_app_font() -> str:
+    font_id = QFontDatabase.addApplicationFont(str(resource_path("fonts", "SNPro-Variable.ttf")))
     if font_id < 0:
         return ""
     families = QFontDatabase.applicationFontFamilies(font_id)
