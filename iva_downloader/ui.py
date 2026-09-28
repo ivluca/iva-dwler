@@ -1,4 +1,3 @@
-import os
 import shlex
 import sys
 import time
@@ -6,10 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QPoint, QProcess, QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QColor, QDesktopServices, QFont, QTextCharFormat, QTextCursor
+from PySide6.QtGui import QColor, QDesktopServices, QFont, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -33,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from .command import build_command, gallery_dl_base_command
+from .config import GalleryDLConfigStore
 from .models import DownloadSettings, find_duplicate_urls, validate_settings
 from .resources import icon, load_app_font
 from .runner import DownloadRunner
@@ -44,12 +43,9 @@ APP_NAME = "IVA Downloader"
 TRANSLATIONS = {
     "vi": {
         "Settings": "Cài đặt", "Check for updates": "Kiểm tra cập nhật", "Language": "Ngôn ngữ", "Advanced": "Nâng cao", "Updates": "Cập nhật", "Apply": "Áp dụng", "Cancel": "Hủy",
-        "Hide advanced": "Ẩn nâng cao", "URLs": "Đường dẫn URL", "Add one URL per line. Lines beginning with # are ignored.": "Nhập mỗi URL trên một dòng. Dòng bắt đầu bằng # sẽ được bỏ qua.",
+        "URLs": "Đường dẫn URL", "Add one URL per line. Lines beginning with # are ignored.": "Nhập mỗi URL trên một dòng. Dòng bắt đầu bằng # sẽ được bỏ qua.",
         "Cookie source": "Nguồn cookie", "Choose a cookies.txt file only when a site requires authentication.": "Chỉ chọn tệp cookies.txt khi trang web yêu cầu xác thực.",
         "Choose an output folder": "Chọn thư mục lưu", "Choose a Netscape-format cookies.txt file": "Chọn tệp cookies.txt định dạng Netscape", "Browse": "Duyệt",
-        "Diagnostics": "Chẩn đoán", "Optional gallery-dl config and extra flags.": "Tệp cấu hình gallery-dl và tùy chọn bổ sung.", "Optional gallery-dl config file": "Tệp cấu hình gallery-dl (tùy chọn)",
-        "Example: --no-mtime": "Ví dụ: --no-mtime", "Pass additional gallery-dl command-line arguments.": "Thêm tham số dòng lệnh cho gallery-dl.",
-        "Simulate only — preview files without downloading": "Chạy thử — xem trước mà không tải tệp", "Verbose logging — show detailed HTTP activity": "Nhật ký chi tiết — hiển thị hoạt động HTTP",
         "Activity": "Hoạt động", "Ready": "Sẵn sàng", "Tasks": "Tác vụ", "Start download": "Bắt đầu tải", "Stop": "Dừng", "Clear log": "Xóa nhật ký",
         "Download activity will appear here.": "Hoạt động tải xuống sẽ hiển thị tại đây.", "Check for updates": "Kiểm tra cập nhật",
     },
@@ -57,16 +53,14 @@ TRANSLATIONS = {
         "Settings": "設定", "Check for updates": "更新を確認", "Language": "言語", "Advanced": "詳細設定", "Updates": "更新", "Apply": "適用", "Cancel": "キャンセル",
         "URLs": "URL", "Add one URL per line. Lines beginning with # are ignored.": "URLを1行に1つ入力してください。#で始まる行は無視されます。", "Paste": "貼り付け", "Import file": "ファイルを読み込む", "Clear": "クリア",
         "Destination": "保存先", "Choose where downloaded files are saved.": "ダウンロードしたファイルの保存先を選択します。", "Cookie source": "Cookie", "Choose a cookies.txt file only when a site requires authentication.": "認証が必要な場合のみcookies.txtを選択してください。",
-        "Choose an output folder": "保存先フォルダーを選択", "Choose a Netscape-format cookies.txt file": "Netscape形式のcookies.txtを選択", "Browse": "参照", "Diagnostics": "詳細オプション", "Optional gallery-dl config and extra flags.": "gallery-dl設定ファイルと追加オプション（任意）。",
-        "Optional gallery-dl config file": "gallery-dl設定ファイル（任意）", "Example: --no-mtime": "例: --no-mtime", "Simulate only — preview files without downloading": "シミュレーション — ダウンロードせずに確認", "Verbose logging — show detailed HTTP activity": "詳細ログ — HTTP通信を表示",
+        "Choose an output folder": "保存先フォルダーを選択", "Choose a Netscape-format cookies.txt file": "Netscape形式のcookies.txtを選択", "Browse": "参照",
         "Activity": "アクティビティ", "Ready": "準備完了", "Tasks": "タスク", "Start download": "ダウンロード開始", "Stop": "停止", "Clear log": "ログを消去", "Download activity will appear here.": "ダウンロード状況がここに表示されます。",
     },
     "zh": {
         "Settings": "设置", "Check for updates": "检查更新", "Language": "语言", "Advanced": "高级", "Updates": "更新", "Apply": "应用", "Cancel": "取消",
         "URLs": "链接", "Add one URL per line. Lines beginning with # are ignored.": "每行输入一个 URL。以 # 开头的行将被忽略。", "Paste": "粘贴", "Import file": "导入文件", "Clear": "清除",
         "Destination": "保存位置", "Choose where downloaded files are saved.": "选择下载文件的保存位置。", "Cookie source": "Cookie 来源", "Choose a cookies.txt file only when a site requires authentication.": "仅在网站需要身份验证时选择 cookies.txt 文件。",
-        "Choose an output folder": "选择输出文件夹", "Choose a Netscape-format cookies.txt file": "选择 Netscape 格式的 cookies.txt 文件", "Browse": "浏览", "Diagnostics": "诊断", "Optional gallery-dl config and extra flags.": "可选的 gallery-dl 配置和额外参数。",
-        "Optional gallery-dl config file": "可选的 gallery-dl 配置文件", "Example: --no-mtime": "例如：--no-mtime", "Simulate only — preview files without downloading": "仅模拟 — 预览文件，不进行下载", "Verbose logging — show detailed HTTP activity": "详细日志 — 显示 HTTP 活动",
+        "Choose an output folder": "选择输出文件夹", "Choose a Netscape-format cookies.txt file": "选择 Netscape 格式的 cookies.txt 文件", "Browse": "浏览",
         "Activity": "活动", "Ready": "就绪", "Tasks": "任务", "Start download": "开始下载", "Stop": "停止", "Clear log": "清除日志", "Download activity will appear here.": "下载活动将显示在这里。",
     },
 }
@@ -78,6 +72,83 @@ def default_output_directory(home: Path | None = None) -> Path:
 
 
 DEFAULT_OUTPUT = default_output_directory()
+
+
+class UrlCommentHighlighter(QSyntaxHighlighter):
+    """Dim comment lines in the URL list while keeping them editable."""
+
+    def __init__(self, document):
+        super().__init__(document)
+        self.comment_format = QTextCharFormat()
+        self.comment_format.setForeground(QColor("#64816d"))
+
+    def highlightBlock(self, text: str) -> None:
+        if text.lstrip().startswith("#"):
+            self.setFormat(0, len(text), self.comment_format)
+
+
+class UrlsTextEdit(QPlainTextEdit):
+    """URL editor with an IDE-style Ctrl+/ comment toggle."""
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Slash and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.toggle_comments()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def toggle_comments(self) -> None:
+        cursor = self.textCursor()
+        selection_start = cursor.selectionStart()
+        selection_end = cursor.selectionEnd()
+        start_block = self.document().findBlock(selection_start)
+        end_block = self.document().findBlock(selection_end)
+        if cursor.hasSelection() and end_block.position() == selection_end and end_block != start_block:
+            end_block = end_block.previous()
+
+        blocks = []
+        block = start_block
+        while block.isValid():
+            blocks.append(block)
+            if block == end_block:
+                break
+            block = block.next()
+        lines = [block.text() for block in blocks]
+        non_empty = [line for line in lines if line.strip()]
+        uncomment = bool(non_empty) and all(line.lstrip().startswith("#") for line in non_empty)
+        updated = []
+        for line in lines:
+            if not line.strip():
+                updated.append(line)
+                continue
+            indent = len(line) - len(line.lstrip())
+            if uncomment:
+                content = line[indent:]
+                content = content[1:]
+                if content.startswith(" "):
+                    content = content[1:]
+                updated.append(line[:indent] + content)
+            else:
+                updated.append(line[:indent] + "# " + line[indent:])
+
+        replace_start = start_block.position()
+        replace_end = end_block.position() + len(end_block.text())
+        replacement = "\n".join(updated)
+        edit_cursor = QTextCursor(self.document())
+        edit_cursor.setPosition(replace_start)
+        edit_cursor.setPosition(replace_end, QTextCursor.MoveMode.KeepAnchor)
+        edit_cursor.insertText(replacement)
+
+        restored = QTextCursor(self.document())
+        restored_start = replace_start
+        restored_end = replace_start + len(replacement)
+        if cursor.hasSelection():
+            restored.setPosition(restored_start)
+            restored.setPosition(restored_end, QTextCursor.MoveMode.KeepAnchor)
+        else:
+            line_offset = max(0, min(cursor.position() - start_block.position(), len(updated[0])))
+            restored.setPosition(replace_start + line_offset)
+        self.setTextCursor(restored)
 
 
 @dataclass
@@ -165,7 +236,7 @@ class DuplicateUrlsDialog(QDialog):
 class SettingsDialog(QDialog):
     LANGUAGES = [("English", "en"), ("Tiếng Việt", "vi"), ("日本語", "ja"), ("中文", "zh")]
 
-    def __init__(self, advanced_card: QWidget, version_label: QLabel, update_button: QPushButton, language: str, parent: QWidget):
+    def __init__(self, version_label: QLabel, update_button: QPushButton, language: str, parent: QWidget):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setObjectName("SettingsDialog")
@@ -184,11 +255,6 @@ class SettingsDialog(QDialog):
         self.language_combo.setCurrentIndex(max(index, 0))
         language_layout.addWidget(self.language_combo)
         layout.addWidget(language_group)
-        advanced_group = QGroupBox("Advanced")
-        advanced_layout = QVBoxLayout(advanced_group)
-        advanced_card.setVisible(True)
-        advanced_layout.addWidget(advanced_card)
-        layout.addWidget(advanced_group)
         update_group = QGroupBox("Updates")
         update_layout = QVBoxLayout(update_group)
         update_row = QHBoxLayout()
@@ -213,7 +279,11 @@ class SettingsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, settings_store: SettingsStore | None = None, check_gallery_dl: bool = True):
         super().__init__()
+        supplied_settings_store = settings_store is not None
         self.settings_store = settings_store or SettingsStore()
+        config_path = self.settings_store.path.parent / "gallery-dl.conf" if supplied_settings_store else None
+        self.gallery_dl_config = GalleryDLConfigStore(config_path)
+        self.gallery_dl_config.ensure_exists()
         self.runner = DownloadRunner(self)
         self.runner.output.connect(self._handle_output)
         self.runner.state_changed.connect(self._on_runner_state)
@@ -237,7 +307,9 @@ class MainWindow(QMainWindow):
         base_font = QFont(self.font())
         if self._brand_family:
             base_font.setFamily(self._brand_family)
+            base_font.setStyleHint(QFont.StyleHint.SansSerif)
         base_font.setWeight(QFont.Weight.Medium)
+        QApplication.instance().setFont(base_font)
         self.setFont(base_font)
 
         self.setWindowTitle(APP_NAME)
@@ -287,7 +359,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.update_button = self._button("Check for updates", "system_update_alt", self._update_gallery_dl)
         self.update_button.setProperty("secondary", True)
-        self.settings_dialog = SettingsDialog(self.diag_card, self.version_label, self.update_button, "en", self)
+        self.settings_dialog = SettingsDialog(self.version_label, self.update_button, "en", self)
         self.settings_dialog.apply_button.clicked.connect(self._apply_settings_changes)
 
     def _build_setup_panel(self) -> QWidget:
@@ -302,8 +374,9 @@ class MainWindow(QMainWindow):
         layout.setSpacing(12)
 
         urls_card, urls_layout = self._card("URLs", "Add one URL per line. Lines beginning with # are ignored.", required=True)
-        self.urls_input = QPlainTextEdit()
+        self.urls_input = UrlsTextEdit()
         self.urls_input.setObjectName("UrlsInput")
+        self.urls_comment_highlighter = UrlCommentHighlighter(self.urls_input.document())
         self.urls_input.setPlaceholderText("https://example.com/gallery")
         self.urls_input.setMinimumHeight(132)
         urls_layout.addWidget(self.urls_input)
@@ -339,29 +412,6 @@ class MainWindow(QMainWindow):
         file_row.addWidget(self._icon_button("folder_open", "Browse", self._choose_cookie_file))
         auth_layout.addLayout(file_row)
         layout.addWidget(auth_card)
-
-        self.diag_card, diag_layout = self._card("Diagnostics", "Optional gallery-dl config and extra flags.")
-        config_row = QHBoxLayout()
-        self.config_file_input = QLineEdit()
-        self.config_file_input.setPlaceholderText("Optional gallery-dl config file")
-        config_row.addWidget(self.config_file_input, 1)
-        config_row.addWidget(self._icon_button("folder_open", "Browse", self._choose_config_file))
-        diag_layout.addLayout(config_row)
-        self.extra_arguments_input = self._line("Example: --no-mtime")
-        self.extra_arguments_input.setToolTip("Pass additional gallery-dl command-line arguments.")
-        self.extra_arguments_error = self._error_label()
-        diag_layout.addWidget(self.extra_arguments_input)
-        diag_layout.addWidget(self.extra_arguments_error)
-
-        self.simulate_checkbox = QCheckBox("Simulate only — preview files without downloading")
-        self.verbose_checkbox = QCheckBox("Verbose logging — show detailed HTTP activity")
-        self.simulate_checkbox.setToolTip("Passes --simulate to gallery-dl. No files are written to disk.")
-        self.verbose_checkbox.setToolTip("Passes -v to gallery-dl. Useful for debugging errors.")
-        diag_layout.addWidget(self.simulate_checkbox)
-        diag_layout.addWidget(self.verbose_checkbox)
-
-        self.diag_card.setVisible(True)
-        layout.addWidget(self.diag_card)
 
         layout.addStretch()
         scroll.setWidget(body)
@@ -557,21 +607,14 @@ class MainWindow(QMainWindow):
         return DownloadSettings(
             destination=self.destination_input.text().strip(),
             cookie_file=self.cookie_file_input.text().strip(),
-            config_file=self.config_file_input.text().strip(),
+            config_file=str(self.gallery_dl_config.path),
             jobs="",
-            simulate=self.simulate_checkbox.isChecked(),
-            verbose=self.verbose_checkbox.isChecked(),
-            extra_arguments=self.extra_arguments_input.text().strip(),
             language=self.settings_dialog.language_combo.currentData() if hasattr(self, "settings_dialog") else "en",
         )
 
     def _apply_settings(self, settings: DownloadSettings) -> None:
         self.destination_input.setText(settings.destination or str(DEFAULT_OUTPUT))
         self.cookie_file_input.setText(settings.cookie_file)
-        self.config_file_input.setText(settings.config_file)
-        self.simulate_checkbox.setChecked(settings.simulate)
-        self.verbose_checkbox.setChecked(settings.verbose)
-        self.extra_arguments_input.setText(settings.extra_arguments)
         index = self.settings_dialog.language_combo.findData(settings.language) if hasattr(self, "settings_dialog") else -1
         if index >= 0:
             self.settings_dialog.language_combo.setCurrentIndex(index)
@@ -580,7 +623,6 @@ class MainWindow(QMainWindow):
         for label in (
             self.urls_error,
             self.destination_error,
-            self.extra_arguments_error,
         ):
             label.clear()
             label.setVisible(False)
@@ -589,7 +631,6 @@ class MainWindow(QMainWindow):
         mapping = {
             "urls": self.urls_error,
             "destination": self.destination_error,
-            "extra_arguments": self.extra_arguments_error,
         }
         for key, message in errors.items():
             if key in mapping:
@@ -602,10 +643,6 @@ class MainWindow(QMainWindow):
         settings = self._collect_settings()
         urls = self._collect_urls()
         errors = validate_settings(settings, urls)
-        try:
-            shlex.split(settings.extra_arguments, posix=os.name != "nt")
-        except ValueError:
-            errors["extra_arguments"] = "Check quotation marks in extra arguments."
         if errors:
             self._show_errors(errors)
             self.status_label.setText("Review the highlighted fields.")
@@ -881,11 +918,6 @@ class MainWindow(QMainWindow):
         if path:
             self.cookie_file_input.setText(path)
 
-    def _choose_config_file(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Choose config file", "", "Config files (*.json *.conf *.yaml *.yml *.toml);;All files (*)")
-        if path:
-            self.config_file_input.setText(path)
-
     def closeEvent(self, event) -> None:
         if self.runner.is_running:
             choice = QMessageBox.question(self, APP_NAME, "A process is still running. Stop it and exit?")
@@ -992,7 +1024,6 @@ class MainWindow(QMainWindow):
             QPushButton#DialogCloseButton { background: transparent; color: #64748b; border: none; padding: 0; font-size: 20px; }
             QDialog#SettingsDialog { background: #f4f6f8; }
             QPushButton#DialogCloseButton:hover { background: #edf2f7; color: #183b56; }
-            QPushButton[advanced="true"] { text-align: left; background: #ffffff; padding: 10px 12px; }
             QProgressBar { border: none; background: #dfe7ed; border-radius: 3px; min-height: 6px; max-height: 6px; }
             QProgressBar::chunk { background: #527b98; border-radius: 3px; }
             QListWidget#TaskList, QListWidget#DuplicateList { background: #ffffff; border: 1px solid #dce3e9; border-radius: 7px; outline: 0; }

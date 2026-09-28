@@ -35,7 +35,7 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 
 **Controls**
 - **Custom destination** — pick any output folder, with a quick "open in explorer" button
-- **Settings dialog** — configure advanced options and choose English, Vietnamese, Japanese, or Chinese
+- **Settings dialog** — choose English, Vietnamese, Japanese, or Chinese
 - **Apply or cancel** — review settings changes before applying them
 - **Update gallery-dl** — see the installed version and upgrade gallery-dl without leaving the app
 
@@ -81,7 +81,7 @@ py -m venv .venv
 4. Select **Start download**. If URLs are repeated, choose **Skip duplicates** to download each URL once, or **Download duplicates** to download every occurrence.
 5. Follow each URL's status in the **Activity** panel. Select **Stop** to halt the current batch.
 
-Use **Settings** for language, advanced gallery-dl options, and updates. Select **Apply** to save changes; **Cancel** discards changes that have not been applied.
+Use **Settings** to choose the interface language or check for updates. gallery-dl settings are stored in `gallery-dl.conf` and applied automatically. The file includes repost handling, artist-based filenames, and JSON metadata sidecars. Edit it directly to change those defaults. On Windows, the file is in `%APPDATA%\IVA Downloader`; on Linux, it is in `${XDG_CONFIG_HOME}/iva-downloader` or `~/.config/iva-downloader`.
 
 ### Supported languages
 
