@@ -11,3 +11,5 @@ output/*
 
 *.egg-info/
 .worktrees/
+
+cookies.txt
