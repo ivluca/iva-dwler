@@ -767,13 +767,19 @@ class MainWindow(QMainWindow):
             "warning": "#9a6700",
             "error": "#b42318",
         }
+        scrollbar = self.log.verticalScrollBar()
+        was_at_bottom = scrollbar.value() >= scrollbar.maximum() - 1
+        previous_scroll_value = scrollbar.value()
+
         cursor = self.log.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         fmt = QTextCharFormat()
         fmt.setForeground(QColor(colors.get(kind, colors["normal"])))
         cursor.insertText(text, fmt)
-        self.log.setTextCursor(cursor)
-        self.log.ensureCursorVisible()
+        if was_at_bottom:
+            scrollbar.setValue(scrollbar.maximum())
+        else:
+            scrollbar.setValue(previous_scroll_value)
 
     def _on_finished(self, exit_code: int) -> None:
         if self._line_buffer:
