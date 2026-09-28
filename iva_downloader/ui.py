@@ -45,7 +45,6 @@ TRANSLATIONS = {
     "vi": {
         "Settings": "Cài đặt", "Check for updates": "Kiểm tra cập nhật", "Language": "Ngôn ngữ", "Advanced": "Nâng cao", "Updates": "Cập nhật", "Apply": "Áp dụng", "Cancel": "Hủy",
         "Hide advanced": "Ẩn nâng cao", "URLs": "Đường dẫn URL", "Add one URL per line. Lines beginning with # are ignored.": "Nhập mỗi URL trên một dòng. Dòng bắt đầu bằng # sẽ được bỏ qua.",
-        "Paste": "Dán", "Import file": "Nhập tệp", "Clear": "Xóa", "Destination": "Thư mục lưu", "Choose where downloaded files are saved.": "Chọn nơi lưu tệp đã tải.",
         "Cookie source": "Nguồn cookie", "Choose a cookies.txt file only when a site requires authentication.": "Chỉ chọn tệp cookies.txt khi trang web yêu cầu xác thực.",
         "Choose an output folder": "Chọn thư mục lưu", "Choose a Netscape-format cookies.txt file": "Chọn tệp cookies.txt định dạng Netscape", "Browse": "Duyệt",
         "Diagnostics": "Chẩn đoán", "Optional gallery-dl config and extra flags.": "Tệp cấu hình gallery-dl và tùy chọn bổ sung.", "Optional gallery-dl config file": "Tệp cấu hình gallery-dl (tùy chọn)",
@@ -536,7 +535,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
 
     def _collect_urls(self) -> list[str]:
-        return [line.strip() for line in self.urls_input.toPlainText().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+        return [line for line in self._clean_url_lines(self.urls_input.toPlainText()) if not line.startswith("#")]
+
+    @staticmethod
+    def _clean_url_lines(text: str) -> list[str]:
+        return [line.strip() for line in text.splitlines() if line.strip()]
 
     def _remove_duplicate_url_lines(self) -> None:
         seen: set[str] = set()
@@ -595,6 +598,7 @@ class MainWindow(QMainWindow):
 
     def _start_download(self) -> None:
         self._clear_errors()
+        self.urls_input.setPlainText("\n".join(self._clean_url_lines(self.urls_input.toPlainText())))
         settings = self._collect_settings()
         urls = self._collect_urls()
         errors = validate_settings(settings, urls)
@@ -844,10 +848,10 @@ class MainWindow(QMainWindow):
         self.runner.start([sys.executable, "-m", "pip", "install", "-U", "gallery-dl"])
 
     def _paste_urls(self) -> None:
-        text = QApplication.clipboard().text().strip()
+        text = "\n".join(self._clean_url_lines(QApplication.clipboard().text()))
         if not text:
             return
-        current = self.urls_input.toPlainText().strip()
+        current = "\n".join(self._clean_url_lines(self.urls_input.toPlainText()))
         self.urls_input.setPlainText(f"{current}\n{text}" if current else text)
 
     def _import_urls(self) -> None:
@@ -858,7 +862,8 @@ class MainWindow(QMainWindow):
             except OSError as error:
                 QMessageBox.warning(self, APP_NAME, f"Could not read the selected file: {error}")
                 return
-            current = self.urls_input.toPlainText().strip()
+            text = "\n".join(self._clean_url_lines(text))
+            current = "\n".join(self._clean_url_lines(self.urls_input.toPlainText()))
             self.urls_input.setPlainText(f"{current}\n{text}" if current else text)
 
     def _choose_destination(self) -> None:
