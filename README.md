@@ -47,7 +47,7 @@ Download images and galleries from 300+ sites — with a clean interface, live o
 - **Transfer stats** — track downloaded files, total size, and average transfer speed
 
 **UX**
-- **Persistent settings** — applied options and last-used paths are remembered between sessions
+- **Simple configuration** — gallery-dl options are edited directly in `gallery-dl.conf`
 - **Polished light theme** — Qt Fusion palette with a custom stylesheet and SVG icons
 - **Fixed two-panel layout** — setup on the left, activity on the right
 
@@ -81,7 +81,7 @@ py -m venv .venv
 4. Select **Start download**. If URLs are repeated, choose **Skip duplicates** to download each URL once, or **Download duplicates** to download every occurrence.
 5. Follow each URL's status in the **Activity** panel. Select **Stop** to halt the current batch.
 
-Use **Settings** to choose the interface language or check for updates. gallery-dl settings are stored in `gallery-dl.conf` and applied automatically. The file includes repost handling, artist-based filenames, and JSON metadata sidecars. Edit it directly to change those defaults. On Windows, the file is in `%APPDATA%\IVA Downloader`; on Linux, it is in `${XDG_CONFIG_HOME}/iva-downloader` or `~/.config/iva-downloader`.
+Use **Settings** to choose the interface language, check for updates, or open the `gallery-dl.conf` configuration file by clicking its path. gallery-dl settings are stored in `gallery-dl.conf` and applied automatically. The file includes repost handling, artist-based filenames, and JSON metadata sidecars. Edit it directly to change those defaults. On Windows, the file is in `%APPDATA%\IVA Downloader`; on Linux, it is in `${XDG_CONFIG_HOME}/iva-downloader` or `~/.config/iva-downloader`. The GUI no longer saves a separate JSON preferences file.
 
 ### Supported languages
 

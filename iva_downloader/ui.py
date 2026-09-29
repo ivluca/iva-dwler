@@ -2,12 +2,14 @@ import shlex
 import sys
 import time
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QPoint, QProcess, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QKeyEvent, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -42,7 +44,7 @@ APP_NAME = "IVA Downloader"
 
 TRANSLATIONS = {
     "vi": {
-        "Settings": "Cài đặt", "Check for updates": "Kiểm tra cập nhật", "Language": "Ngôn ngữ", "Advanced": "Nâng cao", "Updates": "Cập nhật", "Apply": "Áp dụng", "Cancel": "Hủy",
+        "Settings": "Cài đặt", "Check for updates": "Kiểm tra cập nhật", "Language": "Ngôn ngữ", "Configuration file": "Tệp cấu hình", "Updates": "Cập nhật", "Apply": "Áp dụng", "Cancel": "Hủy",
         "URLs": "Đường dẫn URL", "Add one URL per line. Lines beginning with # are ignored.": "Nhập mỗi URL trên một dòng. Dòng bắt đầu bằng # sẽ được bỏ qua.",
         "Cookie source": "Nguồn cookie", "Choose a cookies.txt file only when a site requires authentication.": "Chỉ chọn tệp cookies.txt khi trang web yêu cầu xác thực.",
         "Choose an output folder": "Chọn thư mục lưu", "Choose a Netscape-format cookies.txt file": "Chọn tệp cookies.txt định dạng Netscape", "Browse": "Duyệt",
@@ -50,14 +52,14 @@ TRANSLATIONS = {
         "Download activity will appear here.": "Hoạt động tải xuống sẽ hiển thị tại đây.", "Check for updates": "Kiểm tra cập nhật",
     },
     "ja": {
-        "Settings": "設定", "Check for updates": "更新を確認", "Language": "言語", "Advanced": "詳細設定", "Updates": "更新", "Apply": "適用", "Cancel": "キャンセル",
+        "Settings": "設定", "Check for updates": "更新を確認", "Language": "言語", "Configuration file": "設定ファイル", "Updates": "更新", "Apply": "適用", "Cancel": "キャンセル",
         "URLs": "URL", "Add one URL per line. Lines beginning with # are ignored.": "URLを1行に1つ入力してください。#で始まる行は無視されます。", "Paste": "貼り付け", "Import file": "ファイルを読み込む", "Clear": "クリア",
         "Destination": "保存先", "Choose where downloaded files are saved.": "ダウンロードしたファイルの保存先を選択します。", "Cookie source": "Cookie", "Choose a cookies.txt file only when a site requires authentication.": "認証が必要な場合のみcookies.txtを選択してください。",
         "Choose an output folder": "保存先フォルダーを選択", "Choose a Netscape-format cookies.txt file": "Netscape形式のcookies.txtを選択", "Browse": "参照",
         "Activity": "アクティビティ", "Ready": "準備完了", "Tasks": "タスク", "Start download": "ダウンロード開始", "Stop": "停止", "Clear log": "ログを消去", "Download activity will appear here.": "ダウンロード状況がここに表示されます。",
     },
     "zh": {
-        "Settings": "设置", "Check for updates": "检查更新", "Language": "语言", "Advanced": "高级", "Updates": "更新", "Apply": "应用", "Cancel": "取消",
+        "Settings": "设置", "Check for updates": "检查更新", "Language": "语言", "Configuration file": "配置文件", "Updates": "更新", "Apply": "应用", "Cancel": "取消",
         "URLs": "链接", "Add one URL per line. Lines beginning with # are ignored.": "每行输入一个 URL。以 # 开头的行将被忽略。", "Paste": "粘贴", "Import file": "导入文件", "Clear": "清除",
         "Destination": "保存位置", "Choose where downloaded files are saved.": "选择下载文件的保存位置。", "Cookie source": "Cookie 来源", "Choose a cookies.txt file only when a site requires authentication.": "仅在网站需要身份验证时选择 cookies.txt 文件。",
         "Choose an output folder": "选择输出文件夹", "Choose a Netscape-format cookies.txt file": "选择 Netscape 格式的 cookies.txt 文件", "Browse": "浏览",
@@ -236,7 +238,7 @@ class DuplicateUrlsDialog(QDialog):
 class SettingsDialog(QDialog):
     LANGUAGES = [("English", "en"), ("Tiếng Việt", "vi"), ("日本語", "ja"), ("中文", "zh")]
 
-    def __init__(self, version_label: QLabel, update_button: QPushButton, language: str, parent: QWidget):
+    def __init__(self, version_label: QLabel, update_button: QPushButton, language: str, config_path: Path, parent: QWidget):
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setObjectName("SettingsDialog")
@@ -255,6 +257,20 @@ class SettingsDialog(QDialog):
         self.language_combo.setCurrentIndex(max(index, 0))
         language_layout.addWidget(self.language_combo)
         layout.addWidget(language_group)
+        config_group = QGroupBox("Configuration file")
+        config_layout = QVBoxLayout(config_group)
+        config_note = QLabel("Edit gallery-dl options directly in this file:")
+        config_note.setWordWrap(True)
+        config_layout.addWidget(config_note)
+        config_link = QLabel(
+            f'<a href="{config_path.resolve().as_uri()}">{escape(str(config_path))}</a>'
+        )
+        config_link.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        config_link.setOpenExternalLinks(True)
+        config_link.setWordWrap(True)
+        config_link.setToolTip("Open gallery-dl.conf")
+        config_layout.addWidget(config_link)
+        layout.addWidget(config_group)
         update_group = QGroupBox("Updates")
         update_layout = QVBoxLayout(update_group)
         update_row = QHBoxLayout()
@@ -281,7 +297,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         supplied_settings_store = settings_store is not None
         self.settings_store = settings_store or SettingsStore()
-        config_path = self.settings_store.path.parent / "gallery-dl.conf" if supplied_settings_store else None
+        config_path = (
+            self.settings_store.path.parent
+            if supplied_settings_store and self.settings_store.path is not None
+            else None
+        )
         self.gallery_dl_config = GalleryDLConfigStore(config_path)
         self.gallery_dl_config.ensure_exists()
         self.runner = DownloadRunner(self)
@@ -359,7 +379,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.update_button = self._button("Check for updates", "system_update_alt", self._update_gallery_dl)
         self.update_button.setProperty("secondary", True)
-        self.settings_dialog = SettingsDialog(self.version_label, self.update_button, "en", self)
+        self.settings_dialog = SettingsDialog(self.version_label, self.update_button, "en", self.gallery_dl_config.path, self)
         self.settings_dialog.apply_button.clicked.connect(self._apply_settings_changes)
 
     def _build_setup_panel(self) -> QWidget:
